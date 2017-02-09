@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityStandardAssets.Characters.FirstPerson;
+using UnityEngine.SceneManagement;
 
 public class monster : MonoBehaviour
 {
@@ -9,6 +11,8 @@ public class monster : MonoBehaviour
     public AudioClip[] footsounds;
     public Transform eyes;
     public AudioSource growl;
+    public GameObject deathCam;
+    public Transform camPos;
 
     private UnityEngine.AI.NavMeshAgent nav;
     private AudioSource sound;
@@ -137,6 +141,23 @@ public class monster : MonoBehaviour
                 {
                     state = "hunt";
                 }
+                //kill the player//
+                else if (nav.remainingDistance <= nav.stoppingDistance + 1f && !nav.pathPending)
+                {
+                    if(player.GetComponent<player>().alive)
+                    {
+                        state = "kill";
+                        player.GetComponent<player>().alive = false;
+                        player.GetComponent<FirstPersonController>().enabled = false;
+                        deathCam.SetActive(true);
+                        deathCam.transform.position = Camera.main.transform.position;
+                        deathCam.transform.rotation = Camera.main.transform.rotation;
+                        Camera.main.gameObject.SetActive(false);
+                        growl.pitch = 0.7f;
+                        growl.Play();
+                        Invoke("reset", 1f);
+                    }
+                }
             }
             
             //Hunt//
@@ -151,8 +172,25 @@ public class monster : MonoBehaviour
                     checkSight();
                 }
             }
+
+            //kill//
+            if(state == "kill")
+            {
+                deathCam.transform.position = Vector3.Slerp(deathCam.transform.position, camPos.position, 10f * Time.deltaTime);
+                deathCam.transform.rotation = Quaternion.Slerp(deathCam.transform.rotation, camPos.rotation, 10f * Time.deltaTime);
+                anim.speed = 1f;
+                nav.SetDestination(deathCam.transform.position);
+            }
+
+
             //walk to player
             //nav.SetDestination(player.transform.position);
         }
 	}
+
+    //reset//
+    void reset()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
 }
